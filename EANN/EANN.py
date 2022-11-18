@@ -1,7 +1,6 @@
 import numpy as np
 import argparse
 import time, os
-# import random
 import process_data_weibo as process_data
 import copy
 import pickle as pickle
@@ -19,11 +18,10 @@ from torch.nn.utils.rnn import pack_padded_sequence
 import torchvision.datasets as dsets
 import torchvision.transforms as transforms
 
-#from logger import Logger
-
 from sklearn import metrics
 from sklearn.preprocessing import label_binarize
 import scipy.io as sio
+
 
 class Rumor_Data(Dataset):
     def __init__(self, dataset):
@@ -43,8 +41,6 @@ class Rumor_Data(Dataset):
         return (self.text[idx], self.image[idx], self.mask[idx]), self.label[idx], self.event_label[idx]
 
 
-
-
 class ReverseLayerF(Function):
 
     #@staticmethod
@@ -56,9 +52,9 @@ class ReverseLayerF(Function):
     def backward(self, grad_output):
         return (grad_output * -self.lambd)
 
+    
 def grad_reverse(x):
     return ReverseLayerF()(x)
-
 
 
 # Neural Network Model (1 hidden layer)
@@ -115,28 +111,16 @@ class CNN_Fusion(nn.Module):
         ## Class  Classifier
         self.class_classifier = nn.Sequential()
         self.class_classifier.add_module('c_fc1', nn.Linear(2 * self.hidden_size, 2))
-        #self.class_classifier.add_module('c_bn1', nn.BatchNorm2d(100))
-        #self.class_classifier.add_module('c_relu1', nn.ReLU(True))
-        #self.class_classifier.add_module('c_drop1', nn.Dropout2d())
-        #self.class_classifier.add_module('c_fc2', nn.Linear(self.hidden_size, 2))
-        #self.class_classifier.add_module('c_bn2', nn.BatchNorm2d(self.hidden_size))
-        #self.class_classifier.add_module('c_relu2', nn.ReLU(True))
-        #self.class_classifier.add_module('c_fc3', nn.Linear(100, 10))
         self.class_classifier.add_module('c_softmax', nn.Softmax(dim=1))
 
         ###Event Classifier
         self.domain_classifier = nn.Sequential()
         self.domain_classifier.add_module('d_fc1', nn.Linear(2 * self.hidden_size, self.hidden_size))
-        #self.domain_classifier.add_module('d_bn1', nn.BatchNorm2d(self.hidden_size))
         self.domain_classifier.add_module('d_relu1', nn.LeakyReLU(True))
         self.domain_classifier.add_module('d_fc2', nn.Linear(self.hidden_size, self.event_num))
         self.domain_classifier.add_module('d_softmax', nn.Softmax(dim=1))
 
     def init_hidden(self, batch_size):
-        # Before we've done anything, we dont have any hidden state.
-        # Refer to the Pytorch documentation to see exactly
-        # why they have this dimensionality.
-        # The axes semantics are (num_layers, minibatch_size, hidden_dim)
         return (to_var(torch.zeros(1, batch_size, self.lstm_size)),
                 to_var(torch.zeros(1, batch_size, self.lstm_size)))
 
@@ -168,12 +152,7 @@ class CNN_Fusion(nn.Module):
         ## Domain (which Event )
         reverse_feature = grad_reverse(text_image)
         domain_output = self.domain_classifier(reverse_feature)
-
-        # ### Multimodal
-        # text_reverse_feature = grad_reverse(text)
-        # image_reverse_feature = grad_reverse(image)
-        # text_output = self.modal_classifier(text_reverse_feature)
-        # image_output = self.modal_classifier(image_reverse_feature
+        
         return class_output, domain_output
 
 def to_var(x):
@@ -224,28 +203,12 @@ def split_train_validation(train, percent):
 
 
 def main(args):
-    print('loading data')
-    #    dataset = DiabetesDataset(root=args.training_file)
-    #    train_loader = DataLoader(dataset=dataset,
-    #                              batch_size=32,
-    #                              shuffle=True,
-    #                              num_workers=2)
-
     # MNIST Dataset
     train, validation, test, W = load_data(args)
     test_id = test['post_id']
 
-    #train, validation = split_train_validation(train,  1)
-
-    #weights = make_weights_for_balanced_classes(train[-1], 15)
-    #weights = torch.DoubleTensor(weights)
-    #sampler = torch.utils.data.sampler.WeightedRandomSampler(weights, len(weights))
-
-
     train_dataset = Rumor_Data(train)
-
     validate_dataset = Rumor_Data(validation)
-
     test_dataset = Rumor_Data(test) 
 
     # Data Loader (Input Pipeline)
@@ -272,10 +235,6 @@ def main(args):
     criterion = nn.CrossEntropyLoss()
     optimizer = torch.optim.Adam(filter(lambda p: p.requires_grad, list(model.parameters())),
                                  lr= args.learning_rate)
-    #optimizer = torch.optim.RMSprop(filter(lambda p: p.requires_grad, list(model.parameters())),
-                                 #lr=args.learning_rate)
-    #scheduler = StepLR(optimizer, step_size= 10, gamma= 1)
-
 
     iter_per_epoch = len(train_loader)
     print("loader size " + str(len(train_loader)))
@@ -337,16 +296,6 @@ def main(args):
             domain_cost_vector.append(domain_loss.data[0])
             cost_vector.append(loss.data[0])
             acc_vector.append(accuracy.data[0])
-            # if i == 0:
-            #     train_score = to_np(class_outputs.squeeze())
-            #     train_pred = to_np(argmax.squeeze())
-            #     train_true = to_np(train_labels.squeeze())
-            # else:
-            #     class_score = np.concatenate((train_score, to_np(class_outputs.squeeze())), axis=0)
-            #     train_pred = np.concatenate((train_pred, to_np(argmax.squeeze())), axis=0)
-            #     train_true = np.concatenate((train_true, to_np(train_labels.squeeze())), axis=0)
-
-
 
         model.eval()
         validate_acc_vector_temp = []
@@ -380,12 +329,7 @@ def main(args):
             torch.save(model.state_dict(), best_validate_dir)
 
         duration = time.time() - start_time
-        # print ('Epoch: %d, Mean_Cost: %.4f, Duration: %.4f, Mean_Train_Acc: %.4f, Mean_Test_Acc: %.4f'
-        # % (epoch + 1, np.mean(cost_vector), duration, np.mean(acc_vector), np.mean(test_acc_vector)))
-        # best_validate_dir = args.output_file + 'weibo_GPU2_out.' + str(52) + '.pkl'
     
-
-
     # Test the Model
     print('testing model')
     model = CNN_Fusion(args, W)
@@ -428,13 +372,11 @@ def main(args):
           % (test_confusion_matrix))
 
 
-
 def parse_arguments(parser):
     parser.add_argument('training_file', type=str, metavar='<training_file>', help='')
     #parser.add_argument('validation_file', type=str, metavar='<validation_file>', help='')
     parser.add_argument('testing_file', type=str, metavar='<testing_file>', help='')
     parser.add_argument('output_file', type=str, metavar='<output_file>', help='')
-
     parse.add_argument('--static', type=bool, default=True, help='')
     parser.add_argument('--sequence_length', type=int, default=28, help='')
     parser.add_argument('--class_num', type=int, default=2, help='')
@@ -445,19 +387,12 @@ def parse_arguments(parser):
     parser.add_argument('--filter_num', type=int, default=5, help='')
     parser.add_argument('--lambd', type=int, default= 1, help='')
     parser.add_argument('--text_only', type=bool, default= False, help='')
-
-    #    parser.add_argument('--sequence_length', type = int, default = 28, help = '')
-    #    parser.add_argument('--input_size', type = int, default = 28, help = '')
-    #    parser.add_argument('--hidden_size', type = int, default = 128, help = '')
-    #    parser.add_argument('--num_layers', type = int, default = 2, help = '')
-    #    parser.add_argument('--num_classes', type = int, default = 10, help = '')
     parser.add_argument('--d_iter', type=int, default=3, help='')
     parser.add_argument('--batch_size', type=int, default=100, help='')
     parser.add_argument('--num_epochs', type=int, default=100, help='')
     parser.add_argument('--learning_rate', type=float, default=0.001, help='')
     parser.add_argument('--event_num', type=int, default=10, help='')
 
-    #    args = parser.parse_args()
     return parser
 
 
@@ -486,9 +421,6 @@ def get_top_post(output, label, test_id, top_n = 500):
     return top_n_id
 
 
-
-
-
 def word2vec(post, word_id_map, W):
     word_embedding = []
     mask = []
@@ -505,10 +437,8 @@ def word2vec(post, word_id_map, W):
         while len(sen_embedding) < args.sequence_len:
             sen_embedding.append(0)
 
-
         word_embedding.append(copy.deepcopy(sen_embedding))
         mask.append(copy.deepcopy(mask_seq))
-        #length.append(seq_len)
     return word_embedding, mask
 
 def load_data(args):
@@ -526,7 +456,6 @@ def load_data(args):
     validate['post_text'] = word_embedding
     validate['mask'] = mask
 
-
     print("translate test data to embedding")
     word_embedding, mask = word2vec(test['post_text'], word_idx_map, W)
     test['post_text'] = word_embedding
@@ -540,12 +469,14 @@ def load_data(args):
     print("Finished loading data ")
     return train, validate, test, W
 
+
 def transform(event):
     matrix = np.zeros([len(event), max(event) + 1])
     #print("Translate  shape is " + str(matrix))
     for i, l in enumerate(event):
         matrix[i, l] = 1.00
     return matrix
+
 
 if __name__ == '__main__':
     parse = argparse.ArgumentParser()
@@ -556,5 +487,3 @@ if __name__ == '__main__':
     args = parser.parse_args([train, test, output])
     
     main(args)
-   
-
