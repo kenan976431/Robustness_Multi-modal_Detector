@@ -13,6 +13,7 @@ Adversarial Robustness Toolbox (ART) v1.10: https://github.com/Trusted-AI/advers
 
 # Please Cite
 [J. Chen, C. Jia, H. Zheng, R. Chen and C. Fu, "Is Multi-Modal Necessarily Better? Robustness Evaluation of Multi-Modal Fake News Detection," in IEEE Transactions on Network Science and Engineering, doi: 10.1109/TNSE.2023.3249290.]
+
 @ARTICLE{10054071,
   author={Chen, Jinyin and Jia, Chengyu and Zheng, Haibin and Chen, Ruoxi and Fu, Chenbo},
   journal={IEEE Transactions on Network Science and Engineering}, 
