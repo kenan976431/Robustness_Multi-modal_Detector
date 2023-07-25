@@ -1,6 +1,5 @@
 # Robustness_Multi-modal_Detector
-Is Multi-Modal Necessarily Better? RobustnessEvaluation of Multi-modal Fake News Detection
-https://ieeexplore.ieee.org/abstract/document/10054071
+![Is Multi-Modal Necessarily Better? RobustnessEvaluation of Multi-modal Fake News Detection](https://ieeexplore.ieee.org/abstract/document/10054071)
 
 # Datasets
 Twitter: “verifying multimedia use” task by MediaEval Benchmarking Initiative for Multimedia Evaluation
